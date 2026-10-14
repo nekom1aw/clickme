@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -12,15 +12,1002 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.light {
+  --background: #f4f4f5;
+  --foreground: #18181b;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+html.theme-transition,
+html.theme-transition body,
+html.theme-transition .team-theme,
+html.theme-transition .team-theme * {
+  transition-property: color, background-color, border-color, fill, stroke !important;
+  transition-duration: 300ms !important;
+  transition-timing-function: ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transition,
+  html.theme-transition body,
+  html.theme-transition .team-theme,
+  html.theme-transition .team-theme * {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.messages-page {
+  color: #f4f4f5;
+}
+
+.messages-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.messages-header-icon,
+.messages-card-icon,
+.messages-empty-icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.messages-header-icon {
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.messages-eyebrow,
+.messages-card-kicker {
+  color: rgba(244, 244, 245, 0.45);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.messages-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 126px;
+  padding: 10px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(244, 244, 245, 0.58);
+  font-size: 13px;
+}
+
+.messages-summary-item strong {
+  color: #f4f4f5;
+  font-weight: 650;
+}
+
+.messages-muted {
+  color: rgba(244, 244, 245, 0.62);
+}
+
+.messages-faint {
+  color: rgba(244, 244, 245, 0.42);
+}
+
+.messages-card {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 14px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.messages-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.messages-card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.messages-invitation-icon {
+  background: rgba(59, 130, 246, 0.13);
+  color: #93c5fd;
+}
+
+.messages-account-icon {
+  background: rgba(16, 185, 129, 0.13);
+  color: #6ee7b7;
+}
+
+.messages-project-icon {
+  background: rgba(168, 85, 247, 0.14);
+  color: #d8b4fe;
+}
+
+.messages-strong {
+  color: rgba(244, 244, 245, 0.9);
+}
+
+.messages-account-badge,
+.messages-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.messages-account-badge,
+.messages-status-accepted {
+  background: rgba(16, 185, 129, 0.14);
+  color: #6ee7b7;
+}
+
+.messages-status {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(244, 244, 245, 0.68);
+}
+
+.messages-status-declined,
+.messages-status-cancelled {
+  background: rgba(244, 63, 94, 0.12);
+  color: #fda4af;
+}
+
+.messages-accept {
+  background: #ffffff;
+  color: #18181b;
+}
+
+.messages-decline {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(244, 244, 245, 0.76);
+}
+
+.messages-decline:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.messages-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+.messages-empty {
+  display: flex;
+  min-height: 250px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  color: rgba(244, 244, 245, 0.62);
+  text-align: center;
+}
+
+.messages-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.messages-loading-dot {
+  width: 9px;
+  height: 9px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: #a1a1aa;
+  animation: messages-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes messages-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.message-toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 500;
+  display: flex;
+  width: min(380px, calc(100vw - 32px));
+  gap: 12px;
+  overflow: hidden;
+  padding: 16px 44px 17px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: #202020;
+  color: #f4f4f5;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transform: translate3d(0, 18px, 0) scale(0.98);
+  transition: opacity 220ms ease, transform 220ms ease;
+  pointer-events: none;
+}
+
+.message-toast-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  pointer-events: auto;
+}
+
+.message-toast-icon {
+  display: flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+}
+
+.message-toast-label {
+  color: #6ee7b7;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+}
+
+.message-toast-body {
+  color: rgba(244, 244, 245, 0.62);
+}
+
+.message-toast-link {
+  color: #f4f4f5;
+  text-decoration: none;
+}
+
+.message-toast-link:hover {
+  color: #6ee7b7;
+}
+
+.message-toast-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: rgba(244, 244, 245, 0.5);
+}
+
+.message-toast-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.message-toast-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: #10b981;
+  transform-origin: left;
+  animation: message-toast-progress 5s linear forwards;
+}
+
+@keyframes message-toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+html.light .messages-page {
+  color: #18181b;
+}
+
+html.light .messages-header-icon {
+  border-color: #d4d4d8;
+  background: #ffffff;
+  color: #27272a;
+}
+
+html.light .messages-eyebrow,
+html.light .messages-card-kicker {
+  color: #71717a;
+}
+
+html.light .messages-summary-item {
+  border-color: #d4d4d8;
+  background: #ffffff;
+  color: #52525b;
+}
+
+html.light .messages-summary-item strong {
+  color: #18181b;
+}
+
+html.light .messages-muted {
+  color: #52525b;
+}
+
+html.light .messages-faint {
+  color: #71717a;
+}
+
+html.light .messages-card {
+  border-color: #d4d4d8;
+  background: #ffffff;
+}
+
+html.light .messages-card:hover {
+  border-color: #a1a1aa;
+  background: #ffffff;
+}
+
+html.light .messages-invitation-icon {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+html.light .messages-account-icon {
+  background: #dcfce7;
+  color: #166534;
+}
+
+html.light .messages-project-icon {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+html.light .messages-strong {
+  color: #18181b;
+}
+
+html.light .messages-account-badge {
+  background: #dcfce7;
+  color: #166534;
+}
+
+html.light .messages-status {
+  background: #e4e4e7;
+  color: #3f3f46;
+}
+
+html.light .messages-status-accepted {
+  background: #dcfce7;
+  color: #166534;
+}
+
+html.light .messages-status-declined,
+html.light .messages-status-cancelled {
+  background: #ffe4e6;
+  color: #9f1239;
+}
+
+html.light .messages-accept {
+  background: #18181b;
+  color: #ffffff;
+}
+
+html.light .messages-accept:hover {
+  background: #27272a;
+}
+
+html.light .messages-decline {
+  border-color: #a1a1aa;
+  color: #27272a;
+  background: #ffffff;
+}
+
+html.light .messages-decline:hover {
+  background: #f4f4f5;
+}
+
+html.light .messages-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+html.light .messages-empty {
+  border-color: #d4d4d8;
+  color: #52525b;
+}
+
+html.light .messages-empty-icon {
+  background: #e4e4e7;
+  color: #3f3f46;
+}
+
+html.light .message-toast {
+  border-color: #d4d4d8;
+  background: #ffffff;
+  color: #18181b;
+  box-shadow: 0 20px 55px rgba(24, 24, 27, 0.18);
+}
+
+html.light .message-toast-icon {
+  background: #dcfce7;
+  color: #166534;
+}
+
+html.light .message-toast-label {
+  color: #047857;
+}
+
+html.light .message-toast-body {
+  color: #52525b;
+}
+
+html.light .message-toast-link {
+  color: #18181b;
+}
+
+html.light .message-toast-link:hover {
+  color: #047857;
+}
+
+html.light .message-toast-close {
+  color: #71717a;
+}
+
+html.light .message-toast-close:hover {
+  background: #f4f4f5;
+  color: #18181b;
+}
+
+@media (max-width: 520px) {
+  .messages-card {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .messages-card-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .message-toast {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+.assigned-page {
+  color: #f4f4f5;
+}
+
+.assigned-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.assigned-header-icon,
+.assigned-project-icon,
+.assigned-empty-icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.assigned-header-icon {
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.assigned-eyebrow,
+.assigned-stat-label {
+  color: rgba(244, 244, 245, 0.43);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.assigned-muted {
+  color: rgba(244, 244, 245, 0.55);
+}
+
+.assigned-stat {
+  display: flex;
+  min-height: 92px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 15px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.assigned-stat strong {
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.assigned-stat-warning strong {
+  color: #fca5a5;
+}
+
+.assigned-stat-success strong {
+  color: #6ee7b7;
+}
+
+.assigned-project {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 14px;
+  background: #171717;
+}
+
+.assigned-project-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.assigned-project-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(59, 130, 246, 0.13);
+  color: #93c5fd;
+}
+
+.assigned-task-count {
+  align-items: center;
+  min-height: 23px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(244, 244, 245, 0.55);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.assigned-open-project {
+  color: rgba(244, 244, 245, 0.62);
+}
+
+.assigned-open-project:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.assigned-task-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  transition: background-color 150ms ease;
+}
+
+.assigned-task-row:last-child {
+  border-bottom: 0;
+}
+
+.assigned-task-row:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.assigned-neutral-border {
+  border-color: rgba(244, 244, 245, 0.32);
+}
+
+.assigned-empty {
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.assigned-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(244, 244, 245, 0.55);
+}
+
+html.light .assigned-page {
+  color: #18181b;
+}
+
+html.light .assigned-header-icon {
+  border-color: #d4d4d8;
+  background: #ffffff;
+  color: #27272a;
+}
+
+html.light .assigned-eyebrow,
+html.light .assigned-stat-label {
+  color: #71717a;
+}
+
+html.light .assigned-muted {
+  color: #52525b;
+}
+
+html.light .assigned-stat {
+  border-color: #d4d4d8;
+  background: #ffffff;
+}
+
+html.light .assigned-stat-warning strong {
+  color: #b91c1c;
+}
+
+html.light .assigned-stat-success strong {
+  color: #047857;
+}
+
+html.light .assigned-project {
+  border-color: #d4d4d8;
+  background: #ffffff;
+}
+
+html.light .assigned-project-header {
+  border-color: #e4e4e7;
+  background: #fafafa;
+}
+
+html.light .assigned-project-icon {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+html.light .assigned-task-count {
+  background: #e4e4e7;
+  color: #52525b;
+}
+
+html.light .assigned-open-project {
+  color: #52525b;
+}
+
+html.light .assigned-open-project:hover {
+  background: #e4e4e7;
+  color: #18181b;
+}
+
+html.light .assigned-task-row {
+  border-color: #e4e4e7;
+}
+
+html.light .assigned-task-row:hover {
+  background: #fafafa;
+}
+
+html.light .assigned-neutral-border {
+  border-color: #a1a1aa;
+}
+
+html.light .assigned-empty {
+  border-color: #d4d4d8;
+  background: #ffffff;
+}
+
+html.light .assigned-empty-icon {
+  background: #e4e4e7;
+  color: #52525b;
+}
+
+/* The workspace predates semantic color tokens. These mappings keep its existing
+   dark palette intact while providing one consistent light theme boundary. */
+html.light .team-theme,
+html.light [class~="bg-[#0f0f10]"] {
+  background-color: #f4f4f5 !important;
+  color: #18181b !important;
+}
+
+html.light [class~="bg-[#171717]"],
+html.light [class~="bg-[#181818]"],
+html.light [class~="bg-[#191919]"],
+html.light [class~="bg-[#202020]"],
+html.light [class~="bg-[#252525]"],
+html.light [class~="bg-[#1f1f1f]"],
+html.light [class~="bg-[#1d1d1d]"],
+html.light [class~="bg-[#1c1c1c]"],
+html.light [class~="bg-[#1b1b1b]"],
+html.light [class~="bg-[#171c29]"],
+html.light [class~="bg-[#151515]"],
+html.light [class~="bg-[#12151d]"],
+html.light [class~="bg-[#121212]"],
+html.light [class~="bg-[#111111]"],
+html.light [class~="bg-[#111]"],
+html.light [class~="bg-[#101010]"],
+html.light [class~="bg-[#0d0d0d]"] {
+  background-color: #ffffff !important;
+}
+
+html.light .team-theme .text-white,
+html.light .team-theme .text-white\/90,
+html.light .team-theme .text-white\/85,
+html.light .team-theme .text-white\/80,
+html.light .team-theme .text-white\/75,
+html.light .team-theme .text-white\/70 {
+  color: rgba(24, 24, 27, 0.9) !important;
+}
+
+html.light .team-theme .text-white\/65,
+html.light .team-theme .text-white\/62,
+html.light .team-theme .text-white\/60,
+html.light .team-theme .text-white\/55,
+html.light .team-theme .text-white\/50,
+html.light .team-theme .text-white\/45 {
+  color: rgba(39, 39, 42, 0.68) !important;
+}
+
+html.light .team-theme .text-white\/40,
+html.light .team-theme .text-white\/35,
+html.light .team-theme .text-white\/30,
+html.light .team-theme .text-white\/25 {
+  color: rgba(63, 63, 70, 0.58) !important;
+}
+
+html.light .team-theme .hover\:text-white:hover,
+html.light .team-theme .hover\:text-white\/85:hover,
+html.light .team-theme .hover\:text-white\/80:hover,
+html.light .team-theme .hover\:text-white\/75:hover,
+html.light .team-theme .hover\:text-white\/70:hover,
+html.light .team-theme .hover\:text-white\/65:hover {
+  color: #18181b !important;
+}
+
+html.light
+  .team-theme
+  .group\/project:hover
+  .group-hover\/project\:text-white\/55,
+html.light
+  .team-theme
+  .group\/project:hover
+  .group-hover\/project\:text-white\/45,
+html.light
+  .team-theme
+  .group\/workspace:hover
+  .group-hover\/workspace\:text-white\/55 {
+  color: rgba(24, 24, 27, 0.72) !important;
+}
+
+html.light
+  .team-theme
+  .group\/status-header:hover
+  .group-hover\/status-header\:text-white\/55,
+html.light
+  .team-theme
+  .group\/drag:hover
+  .group-hover\/drag\:text-white {
+  color: rgba(24, 24, 27, 0.72) !important;
+}
+
+html.light .team-theme .placeholder\:text-white\/35::placeholder,
+html.light .team-theme .placeholder\:text-white\/30::placeholder {
+  color: rgba(63, 63, 70, 0.5) !important;
+}
+
+html.light .team-theme .disabled\:text-white\/55:disabled,
+html.light .team-theme .disabled\:hover\:text-white\/60:disabled:hover {
+  color: rgba(63, 63, 70, 0.5) !important;
+}
+
+html.light .team-theme .fill-white {
+  fill: currentColor !important;
+}
+
+html.light
+  .team-theme
+  .status-colored-badge.status-colored-badge {
+  color: #ffffff !important;
+}
+
+html.light
+  .team-theme
+  .status-neutral-badge.status-neutral-badge {
+  background-color: #52525b !important;
+}
+
+html.light .form-save-button {
+  background-color: #18181b !important;
+  color: #fff !important;
+}
+
+html.light .form-save-button:hover {
+  background-color: #27272a !important;
+}
+
+html.light .team-theme .primary-add-task {
+  border-color: #18181b !important;
+  background-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+html.light .team-theme .primary-add-task:hover {
+  border-color: #27272a !important;
+  background-color: #27272a !important;
+  color: #ffffff !important;
+}
+
+html.light .team-theme .sidebar-action-button {
+  background-color: #d4d4d8 !important;
+  color: #18181b !important;
+}
+
+html.light .team-theme .sidebar-action-button:hover {
+  background-color: #c4c4c8 !important;
+  color: #18181b !important;
+}
+
+.team-theme .sidebar-action-button:focus,
+.team-theme .sidebar-action-button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.team-theme .workspace-row-menu-button:focus,
+.team-theme .workspace-row-menu-button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.team-theme .team-sidebar button:focus,
+.team-theme .team-sidebar button:focus-visible {
+  outline-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.team-theme button:focus,
+.team-theme button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+html.light .team-theme .sidebar-action-button[aria-expanded="true"],
+html.light .team-theme .sidebar-action-button[aria-pressed="true"] {
+  background-color: #d4d4d8 !important;
+  color: #18181b !important;
+  outline: 2px solid #18181b !important;
+  outline-offset: 1px;
+}
+
+html.light .team-theme .sidebar-menu-button {
+  color: #18181b !important;
+}
+
+html.light .team-theme .sidebar-menu-button:hover {
+  color: #18181b !important;
+}
+
+html.light .team-theme .border-white\/20,
+html.light .team-theme .border-white\/15,
+html.light .team-theme .border-white\/10 {
+  border-color: rgba(24, 24, 27, 0.14) !important;
+}
+
+html.light .team-theme .bg-white\/15,
+html.light .team-theme .bg-white\/10,
+html.light .team-theme .bg-white\/\[0\.06\],
+html.light .team-theme .bg-white\/\[0\.03\] {
+  background-color: rgba(24, 24, 27, 0.07) !important;
+}
+
+html.light .team-theme .hover\:bg-white\/15:hover,
+html.light .team-theme .hover\:bg-white\/10:hover,
+html.light .team-theme .hover\:bg-white\/\[0\.06\]:hover {
+  background-color: rgba(24, 24, 27, 0.09) !important;
+}
+
+html.light .team-theme [class~="bg-[#6d4cff]"] *,
+html.light .team-theme [class~="bg-[#6d4cff]"],
+html.light .team-theme [class~="bg-[#4f46e5]"],
+html.light .team-theme [class~="bg-blue-500"],
+html.light .team-theme [class~="bg-green-500"] {
+  color: #ffffff !important;
+}
+
+.team-theme .workspace-avatar,
+.team-theme .form-avatar {
+  background-color: #ffffff !important;
+  color: #0f0f10 !important;
+}
+
+.team-theme .workspace-avatar *,
+.team-theme .form-avatar * {
+  color: #0f0f10 !important;
+}
+
+html.light .team-theme .workspace-avatar,
+html.light .team-theme .form-avatar {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+html.light .team-theme .workspace-avatar *,
+html.light .team-theme .form-avatar * {
+  color: #ffffff !important;
+}
+
+.team-theme .workspace-save-button {
+  background: #000 !important;
+  color: #fff !important;
+}
+.team-theme .workspace-save-button:hover {
+  background: #18181b !important;
+}
+
+html.light .team-theme .profile-card {
+  background: #ffffff !important;
+  border-color: #e4e4e7 !important;
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.04);
+}
+
+html.light .team-theme .profile-identity-card {
+  background: linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%) !important;
+  border-color: #e4e4e7 !important;
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.04);
+}
+
+html.light .team-theme .profile-input {
+  background: #fafafa !important;
+  border-color: #d4d4d8 !important;
+  color: #18181b !important;
+}
+
+html.light .team-theme .profile-input:focus {
+  border-color: #71717a !important;
+  box-shadow: 0 0 0 2px rgba(113, 113, 122, 0.12) !important;
+}
+
+html.light .team-theme .profile-input::placeholder {
+  color: rgba(63, 63, 70, 0.5) !important;
+}
+
+html.light .team-theme .profile-save-button {
+  background: #18181b !important;
+  color: #ffffff !important;
+}
+
+html.light .team-theme .profile-save-button:hover {
+  background: #27272a !important;
+}
+
+/* Project timeline grid colors, overridden for the light theme. */
+.timeline-grid {
+  --timeline-line: rgba(255, 255, 255, 0.06);
+  --timeline-weekend: rgba(255, 255, 255, 0.02);
+}
+
+html.light .timeline-grid {
+  --timeline-line: rgba(24, 24, 27, 0.08);
+  --timeline-weekend: rgba(24, 24, 27, 0.03);
+}
+
+.timeline-grid-lines {
+  background-image: linear-gradient(
+    to right,
+    transparent calc(100% - 1px),
+    var(--timeline-line) calc(100% - 1px)
+  );
+  background-repeat: repeat-x;
+}
+
+.timeline-weekend {
+  background-color: var(--timeline-weekend);
 }
