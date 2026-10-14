@@ -1,0 +1,8 @@
+*
+!package.json
+!package-lock.json
+!lib/
+!lib/**
+!docker/
+!docker/worker/
+!docker/worker/**

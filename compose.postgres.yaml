@@ -1,0 +1,25 @@
+name: clickme-postgres
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: clickme-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clickme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-clickme}
+      TZ: Asia/Jakarta
+      PGTZ: Asia/Jakarta
+      # Alpine's libc ignores locales; ICU gives case-insensitive ordering like MySQL's _ci collation.
+      POSTGRES_INITDB_ARGS: --locale-provider=icu --icu-locale=und
+    ports:
+      - 127.0.0.1:${POSTGRES_PORT:-5433}:5432
+    volumes:
+      - clickme-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  clickme-postgres-data:
