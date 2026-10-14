@@ -562,7 +562,7 @@ export async function importDataRequests(
     for (const task of options.notify === false || initialSync ? [] : createdTaskNotifications) {
       await connection.execute(
         "INSERT INTO sheet_notification_queue (task_id, payload) VALUES (?, ?) ON CONFLICT DO NOTHING",
-        [task.taskId, JSON.stringify({ ...task, workspaceName, priority: "Urgent", useLegacyFallback: true })],
+        [task.taskId, JSON.stringify({ ...task, workspaceName, priority: "Urgent" })],
       );
     }
 

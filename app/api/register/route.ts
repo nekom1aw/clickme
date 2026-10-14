@@ -7,7 +7,7 @@ import {
   ensureEmailVerificationSchema,
   issueVerificationCode,
 } from "@/lib/email-verification";
-import { getClientIp, isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
+import { getClientIp, hitRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -39,14 +39,13 @@ async function ensureUsersTable() {
 export async function POST(request: Request) {
   const ipBucket = `register:ip:${getClientIp(request)}`;
 
-  if (await isRateLimited(ipBucket, 10, 60 * 60)) {
+  if (await hitRateLimit(ipBucket, 10, 60 * 60)) {
     return NextResponse.json(
       { error: "Too many sign-up attempts. Please try again later." },
       { status: 429 },
     );
   }
 
-  await recordRateLimitEvent(ipBucket);
   const body = await request.json();
   const name = String(body.name ?? "").trim();
   const email = String(body.email ?? "").trim().toLowerCase();
@@ -62,6 +61,18 @@ export async function POST(request: Request) {
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 180) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  }
+
+  // Optional: keep sign-up to the organisation's own email domains.
+  const allowedDomains = (process.env.REGISTRATION_ALLOWED_DOMAINS ?? "")
+    .split(",")
+    .map((domain) => domain.trim().toLowerCase().replace(/^@/, ""))
+    .filter(Boolean);
+  if (allowedDomains.length && !allowedDomains.includes(email.split("@").pop() ?? "")) {
+    return NextResponse.json(
+      { error: "Registration is limited to approved email domains." },
+      { status: 403 },
+    );
   }
 
   if (password.length < 8) {
@@ -93,15 +104,15 @@ export async function POST(request: Request) {
     );
   }
 
-  // A pending (unverified) account keeps its original credentials. Overwriting them
-  // here would let anyone set the password of an account the owner is about to verify.
+  // The latest sign-up for an unverified address sets its password, and
+  // verification requires that same password with the emailed code. Someone who
+  // registered the address first therefore can't keep a password the owner verifies.
+  const passwordHash = await bcrypt.hash(password, 10);
   let userId: number;
-  let userName = name;
   if (existingUsers[0]) {
     userId = Number(existingUsers[0].id);
-    userName = existingUsers[0].name;
+    await db.execute("UPDATE users SET name=?,direktorat=NULL,password_hash=? WHERE id=? AND email_verified_at IS NULL", [name, passwordHash, userId]);
   } else {
-    const passwordHash = await bcrypt.hash(password, 10);
     const [result] = await db.execute<DbResult>(
       `INSERT INTO users (name, direktorat, email, password_hash, email_verified_at)
        VALUES (?, NULL, ?, ?, NULL)
@@ -112,7 +123,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await issueVerificationCode(userId, email, userName, Boolean(existingUsers[0]));
+    await issueVerificationCode(userId, email, name, Boolean(existingUsers[0]));
   } catch (error) {
     if (error instanceof EmailVerificationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

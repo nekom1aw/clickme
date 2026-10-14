@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import type { DbRow } from "@/lib/db";
 import db from "@/lib/db";
-import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
+import { hitRateLimit } from "@/lib/rate-limit";
 import { sendWahaText } from "@/lib/waha";
 import {
   ensureWhatsappGroupConnectionSchema,
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
   }
 
   const attemptBucket = `waha-connect:${message.chatId}`;
-  if (await isRateLimited(attemptBucket, 10, 10 * 60)) {
+  if (await hitRateLimit(attemptBucket, 10, 10 * 60)) {
     return NextResponse.json({ ignored: true }, { status: 429 });
   }
 
@@ -121,7 +121,6 @@ export async function POST(request: Request) {
   const connection = rows[0];
 
   if (!connection) {
-    await recordRateLimitEvent(attemptBucket);
     await sendWahaText({
       recipient: message.chatId,
       text: "Kode koneksi tidak valid atau sudah kedaluwarsa.",

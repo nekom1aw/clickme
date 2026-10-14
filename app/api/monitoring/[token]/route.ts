@@ -5,7 +5,7 @@ import {
   getPublicMonitoringTask,
   resolvePublicTaskToken,
 } from "@/lib/data-request-monitoring";
-import { getClientIp, isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
+import { getClientIp, hitRateLimit } from "@/lib/rate-limit";
 import { recordTaskActivity } from "@/lib/task-activities";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +64,7 @@ export async function POST(
   }
 
   const ipBucket = `public-chat:ip:${getClientIp(request)}`;
-  if (await isRateLimited(ipBucket, 30, 10 * 60)) {
+  if (await hitRateLimit(ipBucket, 30, 10 * 60)) {
     return NextResponse.json(
       { error: "Terlalu banyak pesan. Tunggu sebentar lalu coba lagi." },
       { status: 429 },
@@ -108,7 +108,6 @@ export async function POST(
     );
   }
 
-  await recordRateLimitEvent(ipBucket);
   await recordTaskActivity({
     taskId: access.taskId,
     userId: null,

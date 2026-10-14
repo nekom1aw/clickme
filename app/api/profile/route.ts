@@ -3,7 +3,7 @@ import type { DbResult, DbRow } from "@/lib/db";
 import db from "@/lib/db";
 import { EmailVerificationError, ensureEmailVerificationSchema, issueVerificationCode } from "@/lib/email-verification";
 import { getSessionUserId, revokeOtherSessions } from "@/lib/session";
-import { isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
+import { hitRateLimit } from "@/lib/rate-limit";
 
 type UserRow = DbRow & {
   id: number;
@@ -36,11 +36,10 @@ export async function PATCH(request: Request) {
   const emailChanged = email !== user.email.toLowerCase();
   const sensitiveChange = emailChanged || Boolean(newPassword);
   const passwordBucket = `password-check:user:${userId}`;
-  if (sensitiveChange && (await isRateLimited(passwordBucket, 8, 15 * 60))) {
+  if (sensitiveChange && (await hitRateLimit(passwordBucket, 8, 15 * 60))) {
     return Response.json({ error: "Terlalu banyak percobaan. Coba lagi dalam 15 menit." }, { status: 429 });
   }
   if (sensitiveChange && (!currentPassword || !(await bcrypt.compare(currentPassword, user.password_hash)))) {
-    await recordRateLimitEvent(passwordBucket);
     return Response.json({ error: "Password saat ini salah." }, { status: 403 });
   }
 
@@ -57,12 +56,13 @@ export async function PATCH(request: Request) {
   }
 
   await ensureEmailVerificationSchema();
-  await db.execute("UPDATE users SET pending_email=? WHERE id=?", [email, userId]);
   try {
     await issueVerificationCode(userId, email, name, true, "email-change");
   } catch (error) {
-    if (error instanceof EmailVerificationError) return Response.json({ error: error.message, pendingEmail: email }, { status: error.status });
+    if (error instanceof EmailVerificationError) return Response.json({ error: error.message }, { status: error.status });
     throw error;
   }
+  // Only recorded once a code for this exact address has been sent.
+  await db.execute("UPDATE users SET pending_email=? WHERE id=?", [email, userId]);
   return Response.json({ user: { id: userId, name, direktorat, email: user.email }, pendingEmail: email });
 }

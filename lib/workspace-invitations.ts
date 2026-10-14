@@ -2,6 +2,7 @@ import db from "@/lib/db";
 import type { DbConnection, DbRow } from "@/lib/db";
 import { ensureProjectPermissionSchema } from "@/lib/project-permissions";
 import { sendWorkspaceInvitationEmail } from "@/lib/workspace-invitation-email";
+import { hitRateLimit } from "@/lib/rate-limit";
 export class InvitationError extends Error {
   status: number;
   constructor(message: string, status = 400) { super(message); this.status = status; }
@@ -25,6 +26,8 @@ export async function inviteWorkspace(workspaceId: number, actor: number, email:
   if (!actor) throw new InvitationError("Silakan login.",401);
   if (!Number.isSafeInteger(workspaceId) || workspaceId < 1 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length>180) throw new InvitationError("Masukkan email yang valid.");
   if (!["administrator","manager","collaborator"].includes(role) || projectIds.some(id=>!Number.isSafeInteger(id)||id<1)) throw new InvitationError("Role atau project tidak valid.");
+  // Invitations send email from the org's SMTP account, so cap them per inviter.
+  if (await hitRateLimit(`invite:user:${actor}`, 30, 86_400)) throw new InvitationError("Terlalu banyak undangan hari ini. Coba lagi besok.",429);
   await ensureInvitations();
   const c=await db.getConnection();
   let invitationDetails: {workspaceName: string; inviterName: string; invitationId: number; projectNames: string[]} | null = null;

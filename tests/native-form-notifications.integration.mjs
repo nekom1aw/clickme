@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createTestDatabase } from "./postgres-test-database.mjs";
 const previousFetch = globalThis.fetch;
+// Direct mode only sends to operator-allowlisted numbers.
+process.env.WAHA_DIRECT_RECIPIENTS = "628123456789";
 let database;
 let pool;
 try {

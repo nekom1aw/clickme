@@ -57,10 +57,12 @@ async function saveProjectAssignments(
   const uniqueProjectIds = [...new Set(projectIds.filter(Boolean))];
 
   await db.execute(
+    // Keep rows for projects the user owns, or they'd be locked out of their own project.
     `DELETE FROM project_members
      USING projects
      WHERE projects.id = project_members.project_id
-       AND projects.workspace_id = ? AND project_members.user_id = ?`,
+       AND projects.workspace_id = ? AND project_members.user_id = ?
+       AND projects.owner_id IS DISTINCT FROM project_members.user_id`,
     [workspaceId, userId],
   );
 
@@ -81,7 +83,12 @@ async function saveProjectAssignments(
     await db.execute<DbResult>(
       `INSERT INTO project_members (project_id, user_id, permission)
        VALUES (?, ?, ?)
-       ON CONFLICT (project_id, user_id) DO UPDATE SET permission = EXCLUDED.permission`,
+       ON CONFLICT (project_id, user_id) DO UPDATE SET permission = EXCLUDED.permission
+       WHERE NOT EXISTS (
+         SELECT 1 FROM projects
+         WHERE projects.id = project_members.project_id
+           AND projects.owner_id = project_members.user_id
+       )`,
       [project.id, userId, permission],
     );
   }

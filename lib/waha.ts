@@ -32,6 +32,20 @@ function getWahaConfig() {
   return { apiUrl, apiKey, session };
 }
 
+/** Numbers listed in WAHA_DIRECT_RECIPIENTS (comma-separated) that forms may message directly. */
+export function isAllowedDirectRecipient(recipient: string) {
+  try {
+    const target = toWahaChatId(recipient);
+    return (process.env.WAHA_DIRECT_RECIPIENTS ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .some((value) => toWahaChatId(value) === target);
+  } catch {
+    return false;
+  }
+}
+
 export function toWahaChatId(recipient: string) {
   const value = recipient.trim();
 

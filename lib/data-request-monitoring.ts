@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import type { DbRow } from "@/lib/db";
 import db from "@/lib/db";
 import { ensureTaskActivitiesTable } from "@/lib/task-activities";
+import { descriptionToText } from "@/lib/description-text";
 import { ensureTaskPublicLinksSchema } from "@/lib/task-public-links";
 
 let schemaPromise: Promise<void> | null = null;
@@ -220,7 +221,8 @@ export async function getPublicMonitoringTask(
      WHERE task_activities.task_id = ?
        AND task_activities.activity_type IN
          ('created', 'status', 'date', 'description', 'comment')
-     ORDER BY task_activities.created_at ASC, task_activities.id ASC`,
+     ORDER BY task_activities.created_at DESC, task_activities.id DESC
+     LIMIT 200`,
     [task.id],
   );
 
@@ -229,7 +231,7 @@ export async function getPublicMonitoringTask(
     kind: access.kind,
     name: task.name,
     projectName: task.project_name,
-    description: task.description ?? "",
+    description: descriptionToText(task.description ?? ""),
     startDate: task.start_date?.toISOString() ?? null,
     dueDate: task.due_date?.toISOString() ?? null,
     createdAt: task.created_at.toISOString(),
@@ -239,7 +241,7 @@ export async function getPublicMonitoringTask(
       category: task.status_category,
       color: task.status_color,
     },
-    activities: activityRows.map((activity) => ({
+    activities: activityRows.reverse().map((activity) => ({
       id: Number(activity.id),
       type: activity.activity_type,
       message: activity.message,

@@ -13,6 +13,7 @@ import {
   FormError,
 } from "@/lib/native-forms";
 import { validateAutomation } from "@/lib/native-form-automation";
+import { isAllowedDirectRecipient } from "@/lib/waha";
 import { validateDefinition } from "@/lib/native-form-fields";
 type Context = { params: Promise<{ formId: string }> };
 export async function GET(_request: Request, context: Context) {
@@ -44,6 +45,16 @@ export async function PATCH(request: Request, context: Context) {
       );
     } catch (error) {
       throw new FormError((error as Error).message);
+    }
+    // Server-only: anyone can build a form, so direct numbers must be allowlisted.
+    if (
+      automation.whatsappEnabled &&
+      automation.whatsappMode === "direct" &&
+      !isAllowedDirectRecipient(automation.whatsappRecipient)
+    ) {
+      throw new FormError(
+        "Nomor ini belum diizinkan. Tambahkan ke WAHA_DIRECT_RECIPIENTS atau kirim ke grup WhatsApp yang terhubung.",
+      );
     }
     await requireFormImage(
       definition.presentation?.imageId,

@@ -55,6 +55,8 @@ Semua contoh ada di [`.env.example`](.env.example). Jangan commit `.env.local`.
 | `MINIO_*` | Penyimpanan lampiran task. Tanpa MinIO, lampiran disimpan di `storage/`. |
 | `WAHA_API_URL`, `WAHA_API_KEY`, `WAHA_SESSION` | Koneksi WAHA untuk notifikasi WhatsApp. |
 | `WAHA_WEBHOOK_SECRET` | **Wajib** untuk `/api/webhooks/waha`; tanpa nilai ini semua request ditolak. |
+| `WAHA_DIRECT_RECIPIENTS` | Nomor yang boleh dikirimi langsung oleh Clickme Forms (pisahkan dengan koma). Kosong = mode nomor langsung nonaktif; notifikasi hanya ke grup yang terhubung via `/connect`. |
+| `REGISTRATION_ALLOWED_DOMAINS` | Opsional. Domain email yang boleh mendaftar, mis. `example.org`. Kosong = pendaftaran terbuka. |
 | `SHEET_SYNC_MODE` | Isi `external` bila worker berjalan lewat Docker. |
 
 Restart `npm run dev` setelah mengubah `.env.local`.
@@ -178,18 +180,39 @@ memerlukan web Clickme aktif. Link dalam pesan mengikuti `APP_URL`.
 
 ## Keamanan
 
+- **Pendaftaran** — kode OTP terikat ke tujuan dan alamat email, maksimal 5
+  percobaan per kode (dihitung atomik) dan 10 kode per akun per hari.
+  Verifikasi akun baru juga meminta password, sehingga orang yang mendaftarkan
+  email orang lain lebih dulu tidak bisa mempertahankan password-nya.
+  Untuk aplikasi internal, isi `REGISTRATION_ALLOWED_DOMAINS`.
 - **Session** — login membuat token acak di cookie `clickme_session`
   (`httpOnly`, `SameSite=Lax`, `Secure` bila `APP_URL` HTTPS). Database hanya
   menyimpan hash-nya (`user_sessions`), berlaku 30 hari, dan dihapus saat logout.
   Mengganti password atau email mengeluarkan session di perangkat lain.
-- **Rate limit** — login (8 gagal per email / 15 menit), register, form publik,
-  chat publik, dan pengecekan password profil (`rate_limit_events`).
+- **Rate limit** — login (8 percobaan per email+IP dan 30 per email / 15 menit),
+  register, OTP, undangan, form publik (per IP dan per form), chat publik, dan
+  pengecekan password profil (`rate_limit_events`). Setiap percobaan dicatat
+  sebelum dihitung sehingga request paralel tidak lolos bersamaan.
 - **Akses** — setiap API memeriksa session dan hak atas workspace/project/task;
-  collaborator hanya melihat task yang ditugaskan kepadanya.
+  collaborator hanya melihat task yang ditugaskan kepadanya, dan akses itu hilang
+  saat ia dikeluarkan dari project. Anggota project hanya bisa ditambahkan dari
+  anggota workspace; orang luar lewat undangan.
+- **WhatsApp** — notifikasi hanya ke grup yang terhubung lewat `/connect` atau ke
+  nomor di `WAHA_DIRECT_RECIPIENTS`, sehingga nomor organisasi tidak bisa dipakai
+  untuk mengirim pesan ke sembarang orang.
 - **Email** — akun baru dan perubahan email wajib diverifikasi lewat OTP; email
   baru disimpan di `pending_email` sampai kodenya dikonfirmasi.
 - **Header** — `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`,
   dan `Referrer-Policy` untuk seluruh halaman (lihat `next.config.ts`).
+
+### Deployment produksi
+
+- Jalankan di belakang reverse proxy (mis. nginx) yang **menimpa**
+  `X-Forwarded-For` dengan IP klien (`proxy_set_header X-Forwarded-For $remote_addr;`)
+  dan membatasi ukuran body (`client_max_body_size 260m;`). Tanpa itu, batas per IP
+  bisa diakali; batas per akun dan per resource tetap berlaku.
+- Set `APP_URL` ke alamat `https://` agar cookie `Secure` dan HSTS aktif.
+- Isi `OTP_SECRET` dengan nilai acak panjang dan jangan pakai ulang password SMTP.
 
 ## Pengujian
 

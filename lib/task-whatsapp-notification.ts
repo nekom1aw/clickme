@@ -2,7 +2,7 @@ import "server-only";
 
 import type { DbRow } from "@/lib/db";
 import db from "@/lib/db";
-import { sendWahaText } from "@/lib/waha";
+import { isAllowedDirectRecipient, sendWahaText } from "@/lib/waha";
 import { ensureWhatsappGroupConnectionSchema } from "@/lib/whatsapp-group-connections";
 
 export type TaskCreatedNotification = {
@@ -20,12 +20,11 @@ export type TaskCreatedNotification = {
   assigneeIds?: number[];
   tags?: string[];
   monitoringPath?: string;
-  useLegacyFallback?: boolean;
 };
 
 export type TaskNotificationResult =
   | { status: "sent"; recipientCount: number }
-  | { status: "skipped"; reason: "group_not_configured" };
+  | { status: "skipped"; reason: "group_not_configured" | "direct_recipient_not_allowed" };
 
 type ConnectedGroupRow = DbRow & {
   group_chat_id: string;
@@ -156,7 +155,6 @@ export async function notifyTaskCreatedToWhatsappGroup({
   assigneeIds,
   tags,
   monitoringPath,
-  useLegacyFallback = false,
 }: TaskCreatedNotification): Promise<TaskNotificationResult> {
   await ensureWhatsappGroupConnectionSchema();
 
@@ -183,10 +181,10 @@ export async function notifyTaskCreatedToWhatsappGroup({
   const recipients = rows
     .map((row) => row.group_chat_id?.trim())
     .filter((groupId): groupId is string => Boolean(groupId));
-  const legacyGroupId = process.env.WAHA_TASK_GROUP_ID?.trim();
-
-  if (!recipients.length && useLegacyFallback && legacyGroupId) {
-    recipients.push(legacyGroupId);
+  // Anyone can sign up and build a form, so direct messages only go to numbers
+  // the operator listed; otherwise the org's WhatsApp number becomes a relay.
+  if (directRecipient && !isAllowedDirectRecipient(directRecipient)) {
+    return { status: "skipped", reason: "direct_recipient_not_allowed" };
   }
 
   const uniqueRecipients = directRecipient ? [directRecipient] : [...new Set(recipients)];

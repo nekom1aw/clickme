@@ -1,13 +1,16 @@
 import "server-only";
 
-import { createHmac, randomInt } from "node:crypto";
+import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
+import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import db from "@/lib/db";
-import type { DbRow } from "@/lib/db";
+import type { DbConnection, DbResult, DbRow } from "@/lib/db";
+import { hitRateLimit } from "@/lib/rate-limit";
 
 const CODE_LIFETIME_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 60;
 const MAX_ATTEMPTS = 5;
+const MAX_CODES_PER_DAY = 10;
 
 export class EmailVerificationError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -19,8 +22,26 @@ function codeSecret() {
   return secret;
 }
 
-function hashCode(userId: number, code: string) {
-  return createHmac("sha256", codeSecret()).update(`${userId}:${code}`).digest("hex");
+// Bound to purpose and address: a code mailed to one address can never confirm another.
+function hashCode(purpose: CodePurpose, userId: number, email: string, code: string) {
+  return createHmac("sha256", codeSecret())
+    .update(`${purpose}:${userId}:${email.trim().toLowerCase()}:${code}`)
+    .digest("hex");
+}
+
+function codeMatches(expectedHash: string, purpose: CodePurpose, userId: number, email: string, code: string) {
+  const actual = Buffer.from(hashCode(purpose, userId, email, code), "hex");
+  const expected = Buffer.from(expectedHash, "hex");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+/** Counts an attempt atomically, so parallel guesses cannot exceed MAX_ATTEMPTS. */
+async function consumeAttempt(connection: DbConnection, userId: number) {
+  const [result] = await connection.execute<DbResult>(
+    "UPDATE email_verification_codes SET attempts=attempts+1 WHERE user_id=? AND attempts<? AND expires_at>NOW() RETURNING code_hash",
+    [userId, MAX_ATTEMPTS],
+  );
+  return result.rows[0]?.code_hash as string | undefined;
 }
 
 function escapeHtml(value: string) {
@@ -94,10 +115,13 @@ export async function issueVerificationCode(userId: number, email: string, name:
       throw new EmailVerificationError(`Please wait ${wait} seconds before requesting another code.`, 429);
     }
   }
+  if (await hitRateLimit(`otp-send:user:${userId}`, MAX_CODES_PER_DAY, 86_400)) {
+    throw new EmailVerificationError("Too many verification codes requested today. Try again tomorrow.", 429);
+  }
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   await db.execute(`INSERT INTO email_verification_codes (user_id,code_hash,expires_at,attempts,last_sent_at)
     VALUES (?,?,NOW() + make_interval(mins => ?::int),0,NOW())
-    ON CONFLICT (user_id) DO UPDATE SET code_hash=EXCLUDED.code_hash,expires_at=EXCLUDED.expires_at,attempts=0,last_sent_at=NOW()`, [userId, hashCode(userId, code), CODE_LIFETIME_MINUTES]);
+    ON CONFLICT (user_id) DO UPDATE SET code_hash=EXCLUDED.code_hash,expires_at=EXCLUDED.expires_at,attempts=0,last_sent_at=NOW()`, [userId, hashCode(purpose, userId, email, code), CODE_LIFETIME_MINUTES]);
   try { await sendCodeEmail(email, name, code, purpose); }
   catch (error) {
     await db.execute("DELETE FROM email_verification_codes WHERE user_id=?", [userId]);
@@ -106,25 +130,34 @@ export async function issueVerificationCode(userId: number, email: string, name:
   }
 }
 
-export async function verifyEmailCode(email: string, code: string) {
+/**
+ * Verifies a sign-up code. The account password is required too, so whoever
+ * registered the address cannot hand a pre-set password to the real owner.
+ */
+export async function verifyEmailCode(email: string, code: string, password: string) {
   await ensureEmailVerificationSchema();
+  const invalid = new EmailVerificationError("The verification code or password is incorrect.", 400);
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-    const [rows] = await connection.query<DbRow[]>(`SELECT u.id,u.name,u.direktorat,u.email,u.photo_url,u.email_verified_at,v.code_hash,v.expires_at,v.attempts
+    const [rows] = await connection.query<DbRow[]>(`SELECT u.id,u.name,u.direktorat,u.email,u.photo_url,u.password_hash,u.email_verified_at,v.expires_at
       FROM users u LEFT JOIN email_verification_codes v ON v.user_id=u.id WHERE u.email=? LIMIT 1 FOR UPDATE OF u`, [email]);
     const user = rows[0];
-    if (!user) throw new EmailVerificationError("Account not found.", 404);
+    if (!user) throw invalid;
     // Never hand back a verified account here: the caller signs the user in, so
     // skipping the code check would let anyone log in as any verified email.
     if (user.email_verified_at) throw new EmailVerificationError("This email is already verified. Please sign in.", 409);
-    if (!user.code_hash) throw new EmailVerificationError("Request a new verification code.", 400);
+    if (!user.expires_at) throw new EmailVerificationError("Request a new verification code.", 400);
     if (new Date(user.expires_at).getTime() < Date.now()) throw new EmailVerificationError("Verification code has expired. Request a new code.", 410);
-    if (Number(user.attempts) >= MAX_ATTEMPTS) throw new EmailVerificationError("Too many failed attempts. Request a new code.", 429);
-    if (hashCode(Number(user.id), code) !== user.code_hash) {
-      await connection.execute("UPDATE email_verification_codes SET attempts=attempts+1 WHERE user_id=?", [user.id]);
+    const codeHash = await consumeAttempt(connection, Number(user.id));
+    if (!codeHash) {
       await connection.commit();
-      throw new EmailVerificationError("The verification code is incorrect.", 400);
+      throw new EmailVerificationError("Too many failed attempts. Request a new code.", 429);
+    }
+    const passwordValid = await bcrypt.compare(password, String(user.password_hash));
+    if (!passwordValid || !codeMatches(codeHash, "signup", Number(user.id), String(user.email), code)) {
+      await connection.commit();
+      throw invalid;
     }
     await connection.execute("UPDATE users SET email_verified_at=NOW() WHERE id=?", [user.id]);
     await connection.execute("DELETE FROM email_verification_codes WHERE user_id=?", [user.id]);
@@ -149,15 +182,18 @@ export async function confirmPendingEmail(userId: number, code: string) {
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
-    const [rows] = await connection.query<DbRow[]>(`SELECT u.id,u.name,u.email,u.pending_email,v.code_hash,v.expires_at,v.attempts
+    const [rows] = await connection.query<DbRow[]>(`SELECT u.id,u.name,u.email,u.pending_email,v.expires_at
       FROM users u LEFT JOIN email_verification_codes v ON v.user_id=u.id WHERE u.id=? LIMIT 1 FOR UPDATE OF u`, [userId]);
     const user = rows[0];
     if (!user?.pending_email) throw new EmailVerificationError("There is no email change waiting for verification.", 400);
-    if (!user.code_hash) throw new EmailVerificationError("Request a new verification code.", 400);
+    if (!user.expires_at) throw new EmailVerificationError("Request a new verification code.", 400);
     if (new Date(user.expires_at).getTime() < Date.now()) throw new EmailVerificationError("Verification code has expired. Request a new code.", 410);
-    if (Number(user.attempts) >= MAX_ATTEMPTS) throw new EmailVerificationError("Too many failed attempts. Request a new code.", 429);
-    if (hashCode(Number(user.id), code) !== user.code_hash) {
-      await connection.execute("UPDATE email_verification_codes SET attempts=attempts+1 WHERE user_id=?", [user.id]);
+    const codeHash = await consumeAttempt(connection, Number(user.id));
+    if (!codeHash) {
+      await connection.commit();
+      throw new EmailVerificationError("Too many failed attempts. Request a new code.", 429);
+    }
+    if (!codeMatches(codeHash, "email-change", Number(user.id), String(user.pending_email), code)) {
       await connection.commit();
       throw new EmailVerificationError("The verification code is incorrect.", 400);
     }
@@ -169,6 +205,7 @@ export async function confirmPendingEmail(userId: number, code: string) {
     return { name: String(user.name), oldEmail: String(user.email), newEmail: String(user.pending_email) };
   } catch (error) {
     try { await connection.rollback(); } catch {}
+    if ((error as { code?: string }).code === "23505") throw new EmailVerificationError("This email is already used by another account.", 409);
     throw error;
   } finally { connection.release(); }
 }

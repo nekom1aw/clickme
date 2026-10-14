@@ -329,3 +329,19 @@ test("option image metadata is bound to valid options", () => {
     }),
   );
 });
+
+test("direct WhatsApp recipients must be allowlisted", async () => {
+  const { isAllowedDirectRecipient } = await import("../lib/waha.ts");
+  const previous = process.env.WAHA_DIRECT_RECIPIENTS;
+  try {
+    delete process.env.WAHA_DIRECT_RECIPIENTS;
+    assert.equal(isAllowedDirectRecipient("628123456789"), false);
+    process.env.WAHA_DIRECT_RECIPIENTS = "08123456789, 628999";
+    assert.equal(isAllowedDirectRecipient("628123456789"), true);
+    assert.equal(isAllowedDirectRecipient("+62 812-3456-789"), true);
+    assert.equal(isAllowedDirectRecipient("628111111111"), false);
+  } finally {
+    if (previous === undefined) delete process.env.WAHA_DIRECT_RECIPIENTS;
+    else process.env.WAHA_DIRECT_RECIPIENTS = previous;
+  }
+});

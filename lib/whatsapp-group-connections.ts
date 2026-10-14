@@ -73,7 +73,8 @@ export async function canManageWhatsappScope(
        WHERE workspaces.id = ?
          AND (
            workspaces.owner_id = ?
-           OR workspace_members.role IN ('administrator', 'manager')
+           -- Workspace groups receive every project's tasks, including private ones.
+           OR workspace_members.role = 'administrator'
          )
      )::int AS can_manage`,
     [userId, scopeId, userId],

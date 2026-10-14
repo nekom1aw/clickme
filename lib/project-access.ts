@@ -51,8 +51,9 @@ export async function getTaskAccess(
          OR project_members.permission IN ('Full akses', 'Manage')
        )::int AS can_manage,
        BOOL_OR(
-         tasks.assignee_id = ?
-         OR task_assignees.user_id IS NOT NULL
+         (tasks.assignee_id = ? OR task_assignees.user_id IS NOT NULL)
+         -- Assignment only counts while the user still belongs to the project.
+         AND (project_members.user_id IS NOT NULL OR projects.owner_id = ?)
        )::int AS is_assigned
      FROM tasks
      INNER JOIN projects ON projects.id = tasks.project_id
@@ -62,7 +63,7 @@ export async function getTaskAccess(
      LEFT JOIN task_assignees ON task_assignees.task_id = tasks.id
        AND task_assignees.user_id = ?
      WHERE tasks.id = ? AND tasks.project_id = ?`,
-    [userId, userId, userId, userId, userId, taskId, projectId],
+    [userId, userId, userId, userId, userId, userId, taskId, projectId],
   );
 
   return {
@@ -115,17 +116,21 @@ export async function canChatOnTask(
        SELECT 1
        FROM tasks
        INNER JOIN projects ON projects.id = tasks.project_id
+       LEFT JOIN project_members ON project_members.project_id = projects.id
+         AND project_members.user_id = ?
        LEFT JOIN task_assignees ON task_assignees.task_id = tasks.id
          AND task_assignees.user_id = ?
        WHERE tasks.id = ?
          AND tasks.project_id = ?
          AND (
            projects.owner_id = ?
-           OR tasks.assignee_id = ?
-           OR task_assignees.user_id IS NOT NULL
+           OR (
+             (tasks.assignee_id = ? OR task_assignees.user_id IS NOT NULL)
+             AND project_members.user_id IS NOT NULL
+           )
          )
      )::int AS can_chat`,
-    [userId, taskId, projectId, userId, userId],
+    [userId, userId, taskId, projectId, userId, userId],
   );
 
   return Boolean(rows[0]?.can_chat);

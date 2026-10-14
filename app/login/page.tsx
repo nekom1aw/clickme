@@ -20,8 +20,8 @@ async function readResponse(response: Response): Promise<ApiResponse> {
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("admin@clickme.test");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
   const [code, setCode] = useState("");
@@ -95,7 +95,7 @@ export default function LoginPage() {
       const response = await fetch("/api/register/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: verificationEmail, code }),
+        body: JSON.stringify({ email: verificationEmail, code, password }),
       });
       const data = await readResponse(response);
       if (!response.ok) {

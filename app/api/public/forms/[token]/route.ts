@@ -16,7 +16,7 @@ import {
 } from "@/lib/native-forms";
 import { validateFormResponse } from "@/lib/native-form-fields";
 import db from "@/lib/db";
-import { getClientIp, isRateLimited, recordRateLimitEvent } from "@/lib/rate-limit";
+import { getClientIp, hitRateLimit } from "@/lib/rate-limit";
 type Context = { params: Promise<{ token: string }> };
 export async function GET(_request: Request, context: Context) {
   try {
@@ -43,10 +43,13 @@ export async function GET(_request: Request, context: Context) {
 }
 export async function POST(request: Request, context: Context) {
   try {
-    const ipBucket = `public-form:ip:${getClientIp(request)}`;
-    if (await isRateLimited(ipBucket, 20, 10 * 60))
+    const token = (await context.params).token;
+    // The per-form cap holds even if the client IP is spoofed.
+    if (
+      (await hitRateLimit(`public-form:ip:${getClientIp(request)}`, 20, 10 * 60)) ||
+      (await hitRateLimit(`public-form:token:${token}`, 120, 60 * 60))
+    )
       throw new FormError("Terlalu banyak pengiriman. Coba lagi beberapa menit lagi.", 429);
-    await recordRateLimitEvent(ipBucket);
     const body = await formBody(request);
     if (!body || body.website) throw new FormError("Pengiriman tidak valid.");
     if (

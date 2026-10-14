@@ -14,6 +14,10 @@ async function createSchema() {
     `CREATE INDEX IF NOT EXISTS idx_rate_limit_events_bucket
      ON rate_limit_events (bucket, created_at)`,
   );
+  await db.execute(
+    `CREATE INDEX IF NOT EXISTS idx_rate_limit_events_created_at
+     ON rate_limit_events (created_at)`,
+  );
 }
 
 async function ensureRateLimitSchema() {
@@ -24,12 +28,17 @@ async function ensureRateLimitSchema() {
   await schemaPromise;
 }
 
-export async function isRateLimited(
+/**
+ * Records one hit and reports whether the bucket is now over its limit.
+ * Recording before counting means parallel requests can't all slip through.
+ */
+export async function hitRateLimit(
   bucket: string,
   limit: number,
   windowSeconds: number,
 ) {
   await ensureRateLimitSchema();
+  await db.execute(`INSERT INTO rate_limit_events (bucket) VALUES (?)`, [bucket]);
   const [rows] = await db.query<(DbRow & { hits: number })[]>(
     `SELECT COUNT(*)::int AS hits
      FROM rate_limit_events
@@ -37,31 +46,30 @@ export async function isRateLimited(
     [bucket, windowSeconds],
   );
 
-  return Number(rows[0]?.hits ?? 0) >= limit;
-}
-
-export async function recordRateLimitEvent(...buckets: string[]) {
-  await ensureRateLimitSchema();
-
-  for (const bucket of buckets) {
-    await db.execute(`INSERT INTO rate_limit_events (bucket) VALUES (?)`, [bucket]);
+  if (Math.random() < 0.02) {
+    await db.execute(
+      `DELETE FROM rate_limit_events WHERE created_at < NOW() - INTERVAL '1 day'`,
+    );
   }
 
-  await db.execute(
-    `DELETE FROM rate_limit_events WHERE created_at < NOW() - INTERVAL '1 day'`,
-  );
+  return Number(rows[0]?.hits ?? 0) > limit;
 }
 
-export async function clearRateLimit(bucket: string) {
+export async function clearRateLimit(...buckets: string[]) {
   await ensureRateLimitSchema();
-  await db.execute(`DELETE FROM rate_limit_events WHERE bucket = ?`, [bucket]);
+  for (const bucket of buckets) {
+    await db.execute(`DELETE FROM rate_limit_events WHERE bucket = ?`, [bucket]);
+  }
 }
 
-// Only meaningful behind a proxy that overwrites X-Forwarded-For; per-account
-// buckets remain the primary brute-force protection.
+// Clients can send their own X-Forwarded-For and Next.js keeps it, so only the
+// last hop (appended by the reverse proxy in front of the app) is trusted.
+// Without such a proxy the value is client-controlled, which is why every
+// limit that matters also has a per-account or per-resource bucket.
 export function getClientIp(request: Request) {
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",") ?? [];
   return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    forwarded.at(-1)?.trim() ||
     request.headers.get("x-real-ip")?.trim() ||
     "unknown"
   );

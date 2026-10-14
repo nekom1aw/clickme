@@ -52,6 +52,42 @@ export async function POST(
 ) {
   const { projectId, taskId } = await context.params;
   const userId = await getSessionUserId() || null;
+
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Silakan login terlebih dahulu." },
+      { status: 401 },
+    );
+  }
+
+  const [tasks] = await db.query<TaskRow[]>(
+    `SELECT id FROM tasks WHERE id = ? AND project_id = ? LIMIT 1`,
+    [taskId, projectId],
+  );
+
+  if (!tasks.length) {
+    return NextResponse.json(
+      { error: "Task tidak ditemukan." },
+      { status: 404 },
+    );
+  }
+
+  if (!(await canChatOnTask(projectId, taskId, userId))) {
+    return NextResponse.json(
+      { error: "Hanya owner project dan assignee task yang dapat mengunggah file." },
+      { status: 403 },
+    );
+  }
+
+  // Checked before buffering the body; per-file sizes are checked again below.
+  const declaredSize = Number(request.headers.get("content-length") ?? 0);
+  if (declaredSize > MAX_TASK_ATTACHMENT_BYTES * MAX_TASK_ATTACHMENTS_PER_UPLOAD + 1024 * 1024) {
+    return NextResponse.json(
+      { error: "Ukuran file maksimal 25 MB." },
+      { status: 413 },
+    );
+  }
+
   const formData = await request.formData();
   const files = formData
     .getAll("files")
@@ -86,32 +122,6 @@ export async function POST(
     return NextResponse.json(
       { error: "Ukuran file maksimal 25 MB." },
       { status: 400 },
-    );
-  }
-
-  if (!userId) {
-    return NextResponse.json(
-      { error: "Silakan login terlebih dahulu." },
-      { status: 401 },
-    );
-  }
-
-  const [tasks] = await db.query<TaskRow[]>(
-    `SELECT id FROM tasks WHERE id = ? AND project_id = ? LIMIT 1`,
-    [taskId, projectId],
-  );
-
-  if (!tasks.length) {
-    return NextResponse.json(
-      { error: "Task tidak ditemukan." },
-      { status: 404 },
-    );
-  }
-
-  if (!(await canChatOnTask(projectId, taskId, userId))) {
-    return NextResponse.json(
-      { error: "Hanya owner project dan assignee task yang dapat mengunggah file." },
-      { status: 403 },
     );
   }
 

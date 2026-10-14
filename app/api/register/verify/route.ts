@@ -6,9 +6,11 @@ export async function POST(request: Request) {
   const body = await request.json();
   const email = String(body.email ?? "").trim().toLowerCase();
   const code = String(body.code ?? "").replace(/\D/g, "");
+  const password = String(body.password ?? "");
   if (!email || code.length !== 6) return NextResponse.json({ error: "Enter the 6-digit verification code." }, { status: 400 });
+  if (!password) return NextResponse.json({ error: "Enter your password to finish verification." }, { status: 400 });
   try {
-    const user = await verifyEmailCode(email, code);
+    const user = await verifyEmailCode(email, code, password);
     const response = NextResponse.json({ verified: true, user: { id: user.id, name: user.name, direktorat: user.direktorat ?? "", email: user.email, photoUrl: user.photo_url ?? "" } });
     await createSession(response, user.id);
     return response;

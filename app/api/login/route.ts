@@ -3,12 +3,7 @@ import { NextResponse } from "next/server";
 import type { DbRow } from "@/lib/db";
 import db from "@/lib/db";
 import { ensureEmailVerificationSchema, issueVerificationCode } from "@/lib/email-verification";
-import {
-  clearRateLimit,
-  getClientIp,
-  isRateLimited,
-  recordRateLimitEvent,
-} from "@/lib/rate-limit";
+import { clearRateLimit, getClientIp, hitRateLimit } from "@/lib/rate-limit";
 import { createSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +23,11 @@ type UserRow = DbRow & {
 };
 
 export async function POST(request: Request) {
+  // A cross-site HTML form can't send JSON, so this blocks login CSRF.
+  if (!request.headers.get("content-type")?.includes("application/json")) {
+    return NextResponse.json({ error: "Format request tidak valid." }, { status: 415 });
+  }
+
   await ensureEmailVerificationSchema();
   const body = await request.json();
   const email = String(body.email ?? "").trim().toLowerCase();
@@ -40,12 +40,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const ip = getClientIp(request);
+  const emailIpBucket = `login:email-ip:${email}:${ip}`;
   const emailBucket = `login:email:${email}`;
-  const ipBucket = `login:ip:${getClientIp(request)}`;
+  const ipBucket = `login:ip:${ip}`;
 
+  // Tight per (email, IP) limit; a looser per-email ceiling keeps distributed
+  // guessing slow without letting one attacker lock the owner out as easily.
   if (
-    (await isRateLimited(emailBucket, 8, LOGIN_WINDOW_SECONDS)) ||
-    (await isRateLimited(ipBucket, 40, LOGIN_WINDOW_SECONDS))
+    (await hitRateLimit(emailIpBucket, 8, LOGIN_WINDOW_SECONDS)) ||
+    (await hitRateLimit(emailBucket, 30, LOGIN_WINDOW_SECONDS)) ||
+    (await hitRateLimit(ipBucket, 60, LOGIN_WINDOW_SECONDS))
   ) {
     return NextResponse.json(
       { error: "Terlalu banyak percobaan login. Coba lagi dalam 15 menit." },
@@ -68,7 +73,6 @@ export async function POST(request: Request) {
   );
 
   if (!user || !passwordValid) {
-    await recordRateLimitEvent(emailBucket, ipBucket);
     return NextResponse.json(
       { error: "Email atau password salah." },
       { status: 401 },
@@ -90,7 +94,7 @@ export async function POST(request: Request) {
     },
   });
 
-  await clearRateLimit(emailBucket);
+  await clearRateLimit(emailIpBucket, emailBucket);
   await createSession(response, user.id);
 
   return response;
