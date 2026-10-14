@@ -1,0 +1,86 @@
+.page {
+  --form-bg: #f4f4f5;
+  --form-card: #fff;
+  --form-text: #18181b;
+  --form-border: #e4e4e7;
+  --form-muted: #71717a;
+  color-scheme: light;
+  background: var(--form-bg);
+  color: var(--form-text);
+}
+.page[data-theme="dark"] {
+  --form-bg: #101010;
+  --form-card: #191919;
+  --form-text: #f4f4f5;
+  --form-border: #3f3f46;
+  --form-muted: #a1a1aa;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  .page[data-theme="system"] {
+    --form-bg: #101010;
+    --form-card: #191919;
+    --form-text: #f4f4f5;
+    --form-border: #3f3f46;
+    --form-muted: #a1a1aa;
+    color-scheme: dark;
+  }
+}
+.card {
+  background: var(--form-card);
+  border-color: var(--form-border);
+}
+.accent {
+  height: 0.5rem;
+  background: var(--form-text);
+}
+.page button[type="submit"] {
+  background: var(--form-text);
+  color: var(--form-card);
+}
+.page button[type="submit"]:hover {
+  opacity: 0.85;
+}
+.page :global(.text-zinc-400),
+.page :global(.text-zinc-500) {
+  color: var(--form-muted);
+}
+.page option {
+  background: var(--form-card);
+  color: var(--form-text);
+}
+
+.form :global(.form-introduction),
+.form :global(.form-question-card) {
+  background: var(--form-card);
+  border: 1px solid var(--form-border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.form :global(.form-introduction) {
+  border-top: 6px solid var(--form-text);
+}
+.form :global(.form-question-card) > input,
+.form :global(.form-question-card) > textarea {
+  display: block;
+  margin-top: 28px;
+  border: 0;
+  border-bottom: 1px solid var(--form-border);
+  border-radius: 0;
+  padding: 8px 0;
+  box-shadow: none;
+}
+.form :global(.form-question-card) > input {
+  width: 100%;
+  max-width: 320px;
+}
+.form :global(.form-question-card) > input:focus,
+.form :global(.form-question-card) > textarea:focus {
+  border-bottom-color: var(--form-text);
+}
+@media (min-width: 640px) {
+  .form :global(.form-question-card) {
+    padding: 28px 24px;
+  }
+}

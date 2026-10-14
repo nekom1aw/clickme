@@ -1,0 +1,36 @@
+name: clickme
+services:
+  sheet-worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 90s
+    environment:
+      NODE_ENV: production
+      TZ: Asia/Jakarta
+      POSTGRES_HOST: ${WORKER_POSTGRES_HOST:-host.docker.internal}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5433}
+      POSTGRES_USER: ${POSTGRES_USER:-clickme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-clickme}
+      WAHA_API_URL: ${WORKER_WAHA_API_URL:-http://host.docker.internal:3000}
+      WAHA_API_KEY: ${WAHA_API_KEY:?WAHA_API_KEY is required}
+      WAHA_SESSION: ${WAHA_SESSION:-default}
+      WAHA_DEFAULT_COUNTRY_CODE: ${WAHA_DEFAULT_COUNTRY_CODE:-62}
+      WAHA_TASK_GROUP_ID: ${WAHA_TASK_GROUP_ID:-}
+      APP_URL: ${APP_URL:-http://localhost:3002}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test: ["CMD", "node", "-e", "const fs=require('fs');process.exit(Date.now()-Number(fs.readFileSync('/tmp/clickme-worker-heartbeat','utf8'))<120000?0:1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '3'
